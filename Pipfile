@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 beautifulsoup4 = "*"
 selenium = "*"
-chromedriver-binary = "~=106.0.0"
 
 [dev-packages]
 

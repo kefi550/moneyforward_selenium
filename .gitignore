@@ -18,3 +18,4 @@ share/python-wheels/
 MANIFEST
 
 chrome_profile
+.env

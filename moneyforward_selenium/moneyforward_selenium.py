@@ -1,9 +1,10 @@
-from selenium.webdriver import ChromeOptions, Remote
-# from selenium.webdriver import Chrome
-from selenium.webdriver.support.select import Select
+from selenium.webdriver import Chrome
+from selenium.webdriver import Remote
+from selenium.webdriver import ChromeOptions
+from selenium.webdriver.chrome import service as fs
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.select import Select
 from selenium.common.exceptions import NoSuchElementException
-# import chromedriver_binary
 from urllib.parse import urlparse
 import argparse
 import os
@@ -21,27 +22,25 @@ options = ChromeOptions()
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-# docker-seleniumでheadlessすると初回実行で失敗するっぽいのでnot headlessでいく
-# options.add_argument("--headless")
+options.add_argument("--headless")
+options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36')
 
-
-def _chrome_profile(filepath: str = "./chrome_profile"):
-    if not os.path.exists(filepath):
-        os.mkdir(filepath)
-    return filepath
-    
-
-# chrome_profile = _chrome_profile()
-# driver = Chrome(
-#         options=options,
-# )
-chrome_profile = "/home/seluser/.config/google-chrome/selenium"
+chrome_profile = f"{os.environ['HOME']}/.config/google-chrome/selenium"
+# chrome_profile = "/home/seluser/.config/google-chrome/selenium"
 options.add_argument(f"--user-data-dir={chrome_profile}")
-driver = Remote(
-    command_executor=f'http://{SELENIUM_HOST}:{SELENIUM_PORT}/wd/hub',
+
+chrome_service = fs.Service(executable_path='/usr/local/bin/chromedriver')
+driver = Chrome(
+    service=chrome_service,
     desired_capabilities=options.to_capabilities(),
     options=options,
 )
+
+# driver = Remote(
+#     command_executor=f'http://{SELENIUM_HOST}:{SELENIUM_PORT}/wd/hub',
+#     desired_capabilities=options.to_capabilities(),
+#     options=options,
+# )
 print("driver created")
 
 
