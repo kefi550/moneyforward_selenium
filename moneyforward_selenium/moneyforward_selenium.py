@@ -17,6 +17,7 @@ MONEYFORWARD_USER = os.environ["MONEYFORWARD_USER"]
 MONEYFORWARD_PASSWORD = os.environ["MONEYFORWARD_PASSWORD"]
 SELENIUM_HOST = os.environ.get("SELENIUM_HOST", "127.0.0.1")
 SELENIUM_PORT = os.environ.get("SELENIUM_PORT", "4444")
+CHROME_PROFILE_PATH = os.environ.get("CHROME_PROFILE_PATH", f"{os.environ['HOME']}/.config/google-chrome/selenium")
 
 options = ChromeOptions()
 options.add_argument("--disable-gpu")
@@ -25,9 +26,8 @@ options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--headless")
 options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36')
 
-chrome_profile = f"{os.environ['HOME']}/.config/google-chrome/selenium"
 # chrome_profile = "/home/seluser/.config/google-chrome/selenium"
-options.add_argument(f"--user-data-dir={chrome_profile}")
+options.add_argument(f"--user-data-dir={CHROME_PROFILE_PATH}")
 
 chrome_service = fs.Service(executable_path='/usr/local/bin/chromedriver')
 driver = Chrome(
@@ -70,6 +70,7 @@ def login(mf_user, mf_password):
 def close_driver():
     time.sleep(2)
     driver.quit()
+    print("driver closed")
 
 
 def _update_mf_account(account: str, new_amount: float):
@@ -129,7 +130,6 @@ def update_mf_account(account: str, amount: float):
     login(MONEYFORWARD_USER, MONEYFORWARD_PASSWORD)
     _update_mf_account(account, amount)
     close_driver()
-    print("finish")
 
 
 def parse_args():
