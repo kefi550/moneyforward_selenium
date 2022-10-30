@@ -96,31 +96,31 @@ def _update_mf_account(account: str, new_amount: float):
     print(f"資産総額diff: {amount_diff}")
     if amount_diff == 0:
         print("差分なしにより何もせず終了")
-        return
-
-    # 収入支出詳細
-    in_out = driver.find_element(By.ID, "in_out")
-    in_out.find_element(By.CLASS_NAME, "cf-new-btn").click()
-    driver.implicitly_wait(3)
-    # 手入力モーダル
-    modal = in_out.find_element(By.ID, "user_asset_act_new")
-    # 差額がプラスなら収入、マイナスなら支出として入力
-    if amount_diff > 0:
-        modal.find_element(By.CLASS_NAME, "plus-payment").click()
     else:
-        amount_diff = abs(amount_diff)
-        modal.find_element(By.CLASS_NAME, "minus-payment").click()
-    modal.find_element(By.ID, "appendedPrependedInput").send_keys(amount_diff)
-    modal.find_element(By.CLASS_NAME, "submit-box").click()
-    driver.implicitly_wait(5)
-    # 再描画されて要素を見失うのでリロードする
-    driver.get(MONEYFORWARD_BASE_URL + "/accounts")
-    driver.find_element(By.LINK_TEXT, account).click()
-    in_out = driver.find_element(By.ID, "in_out")
-    # ぜんぶ計算対象外とする(雑)
-    for_calc = in_out.find_elements(By.CLASS_NAME, "icon-check")
-    for payment in for_calc:
-        payment.click()
+        # 収入支出詳細
+        in_out = driver.find_element(By.ID, "in_out")
+        in_out.find_element(By.CLASS_NAME, "cf-new-btn").click()
+        driver.implicitly_wait(3)
+        # 手入力モーダル
+        modal = in_out.find_element(By.ID, "user_asset_act_new")
+        # 差額がプラスなら収入、マイナスなら支出として入力
+        if amount_diff > 0:
+            modal.find_element(By.CLASS_NAME, "plus-payment").click()
+        else:
+            amount_diff = abs(amount_diff)
+            modal.find_element(By.CLASS_NAME, "minus-payment").click()
+        modal.find_element(By.ID, "appendedPrependedInput").send_keys(amount_diff)
+        modal.find_element(By.CLASS_NAME, "submit-box").click()
+        driver.implicitly_wait(5)
+        # 再描画されて要素を見失うのでリロードする
+        driver.get(MONEYFORWARD_BASE_URL + "/accounts")
+        driver.find_element(By.LINK_TEXT, account).click()
+        in_out = driver.find_element(By.ID, "in_out")
+        # ぜんぶ計算対象外とする(雑)
+        for_calc = in_out.find_elements(By.CLASS_NAME, "icon-check")
+        for payment in for_calc:
+            payment.click()
+        print(f"新しい資産総額 {new_amount} の登録完了")
     # 選択グループを元に戻す
     group_select = Select(driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
     group_select.select_by_visible_text(selected_group)
