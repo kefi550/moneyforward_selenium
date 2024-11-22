@@ -1,18 +1,37 @@
-from selenium.webdriver import Remote
-from selenium.webdriver import ChromeOptions
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.select import Select
 import os
 import re
 import time
+import datetime
+from dataclasses import dataclass
+from selenium.webdriver import Remote
+from selenium.webdriver import ChromeOptions
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.select import Select
 
 
 MONEYFORWARD_BASE_URL = "https://moneyforward.com"
-MONEYFORWARD_USER = os.environ["MONEYFORWARD_USER"]
-MONEYFORWARD_PASSWORD = os.environ["MONEYFORWARD_PASSWORD"]
 SELENIUM_HOST = os.environ.get("SELENIUM_HOST", "127.0.0.1")
 SELENIUM_PORT = os.environ.get("SELENIUM_PORT", "4444")
 CHROME_PROFILE_PATH = os.environ.get("CHROME_PROFILE_PATH", "/tmp/moneyforward-selenium")
+
+MONEYFORWARD_USER = os.environ["MONEYFORWARD_USER"]
+MONEYFORWARD_PASSWORD = os.environ["MONEYFORWARD_PASSWORD"]
+
+
+@dataclass
+class Cashflow:
+    id: int
+    calc: bool
+    date: datetime.date
+    fiscal_year: int
+    fiscal_month: int
+    content: str
+    amount: int
+    note: str
+    lcategory: str
+    mcategory: str
+    memo: str
 
 
 class MoneyForwardScraper:
@@ -21,9 +40,14 @@ class MoneyForwardScraper:
         self.login(mf_user, mf_password)
         self.previous_selected_group = self.get_current_group()
 
-    def __del__(self):
-        self.change_mf_group(self.previous_selected_group)
-        self.close_driver()
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self.change_mf_group(self.previous_selected_group)
+        finally:
+            self.close_driver()
 
     def create_driver(self):
         options = ChromeOptions()
@@ -64,7 +88,17 @@ class MoneyForwardScraper:
         password_input.submit()
         print("logged in")
 
-    def _update_account_amount(self, account: str, new_amount: float):
+    def get_current_group(self):
+        group_select = Select(self.driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
+        current_group = group_select.first_selected_option.text
+        return current_group
+
+    def change_mf_group(self, group_name: str):
+        group_select = Select(self.driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
+        group_select.select_by_visible_text(group_name)
+        time.sleep(3)
+
+    def update_account_amount(self, account: str, new_amount: float):
         self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
         self.driver.find_element(By.LINK_TEXT, account).click()
         # 口座の総額
@@ -107,18 +141,73 @@ class MoneyForwardScraper:
                 payment.click()
             print(f"新しい資産総額 {new_amount} の登録完了")
 
-    def get_current_group(self):
-        group_select = Select(self.driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
-        current_group = group_select.first_selected_option.text
-        return current_group
-
-    def change_mf_group(self, group_name: str):
-        group_select = Select(self.driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
-        group_select.select_by_visible_text(group_name)
+    def change_fiscal_month(self, year: int, month: int):
+        self.driver.get(MONEYFORWARD_BASE_URL + "/cf")
+        # ちょっと下にスクロール
+        self.driver.execute_script("window.scrollBy(0, 1000)")
+        year_selector_button = self.driver.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown')
+        year_selector_button.click()
+        year_selector = self.driver.find_elements(By.CLASS_NAME, 'uikit-year-month-select-dropdown-year-part')
+        for div in year_selector:
+            if div.text == str(year):
+                break
+        actions = ActionChains(self.driver)
+        actions.move_to_element(div).perform()
+        print(f"{year}年を選択した")
+        time.sleep(1)
+        month_dropdown = div.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')
+        month_button = month_dropdown.find_element(By.XPATH, f"a[@data-month=\"{month}\"]")
+        month_button.click()
+        print(f"{month}月を選択した")
         time.sleep(3)
+
+    def get_cashflows_of_fiscal_month(self, fiscal_year: int, fiscal_month: int):
+        cashflows = []
+        self.change_fiscal_month(fiscal_year, fiscal_month)
+        cf_detail_table = self.driver.find_element(By.ID, 'cf-detail-table')
+        for row in cf_detail_table.find_element(By.TAG_NAME, 'tbody').find_elements(By.TAG_NAME, 'tr'):
+            calc = True
+            if 'mf-grayout' in row.get_attribute('class'):
+                calc = False
+
+            cells = row.find_elements(By.TAG_NAME, 'td')
+            date_id = cells[1].get_attribute('data-table-sortable-value')
+            date = date_id.split('-')[0]
+            id = int(date_id.split('-')[1])
+            content = cells[2].find_element(By.TAG_NAME, 'span').text
+            amount = cells[3].find_element(By.TAG_NAME, 'span').text.replace(',', '')
+            if cells[4].find_elements(By.CLASS_NAME, 'transfer_account_box'):
+                if int(amount) >= 0:
+                    note = cells[4].find_element(By.CLASS_NAME, 'transfer_account_box').text
+                else:
+                    note = cells[4].text
+            else:
+                note = cells[4].text
+            if calc:
+                lcategory = cells[5].find_element(By.TAG_NAME, 'a').text
+                mcategory = cells[6].find_element(By.TAG_NAME, 'a').text
+            memo = cells[7].find_element(By.TAG_NAME, 'span').text
+
+            print(f"{date} {content} {amount} {note} {lcategory} {mcategory}")
+
+            cashflow = Cashflow(
+                id=id,
+                calc=calc,
+                date=datetime.datetime.strptime(date, '%Y/%m/%d').date(),
+                fiscal_year=fiscal_year,
+                fiscal_month=fiscal_month,
+                content=content,
+                amount=int(amount),
+                note=note,
+                lcategory=lcategory,
+                mcategory=mcategory,
+                memo=memo,
+            )
+            cashflows.append(cashflow)
+        return cashflows
 
 
 def update_mf_account(account: str, amount: float):
     mf = MoneyForwardScraper(MONEYFORWARD_USER, MONEYFORWARD_PASSWORD)
     mf.change_mf_group('グループ選択なし')
-    mf._update_account_amount(account, amount)
+    mf.update_account_amount(account, amount)
