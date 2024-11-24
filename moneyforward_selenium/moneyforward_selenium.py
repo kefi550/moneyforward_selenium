@@ -8,6 +8,7 @@ from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from selenium.common.exceptions import NoSuchElementException
 
 
 MONEYFORWARD_BASE_URL = "https://moneyforward.com"
@@ -32,10 +33,13 @@ class Cashflow:
 
 
 class MoneyForwardScraper:
-    def __init__(self, mf_user, mf_password):
+    def __init__(self, user, password, group_name=None):
         self.create_driver()
-        self.login(mf_user, mf_password)
+        self.login(user, password)
         self.previous_selected_group = self.get_current_group()
+        # グループが指定されている場合は変更
+        if group_name is not None:
+            self.change_mf_group(group_name)
 
     def __enter__(self):
         return self
@@ -61,8 +65,9 @@ class MoneyForwardScraper:
         print("driver created")
 
     def close_driver(self):
-        self.driver.quit()
-        print("driver closed")
+        if self.driver is not None:
+            self.driver.quit()
+            print("driver closed")
 
     def is_logined(self):
         self.driver.get(MONEYFORWARD_BASE_URL)
@@ -92,8 +97,12 @@ class MoneyForwardScraper:
 
     def change_mf_group(self, group_name: str):
         group_select = Select(self.driver.find_element(By.CLASS_NAME, 'mf-floating-sub-account-box').find_element(By.TAG_NAME, 'select'))
-        group_select.select_by_visible_text(group_name)
-        time.sleep(3)
+        try:
+            group_select.select_by_visible_text(group_name)
+            print(f"グループ {group_name} に変更しました")
+            time.sleep(2)
+        except NoSuchElementException:
+            raise Exception(f"グループ {group_name} が見つかりませんでした")
 
     def update_account_amount(self, account: str, new_amount: float):
         self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
