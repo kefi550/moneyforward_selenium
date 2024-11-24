@@ -1,2 +1,2 @@
-from .moneyforward_selenium import update_mf_account, MoneyForwardScraper
+from .moneyforward_selenium import MoneyForwardScraper
 __version__ = '0.3.0'

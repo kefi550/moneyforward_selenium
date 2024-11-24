@@ -15,9 +15,6 @@ SELENIUM_HOST = os.environ.get("SELENIUM_HOST", "127.0.0.1")
 SELENIUM_PORT = os.environ.get("SELENIUM_PORT", "4444")
 CHROME_PROFILE_PATH = os.environ.get("CHROME_PROFILE_PATH", "/tmp/moneyforward-selenium")
 
-MONEYFORWARD_USER = os.environ["MONEYFORWARD_USER"]
-MONEYFORWARD_PASSWORD = os.environ["MONEYFORWARD_PASSWORD"]
-
 
 @dataclass
 class Cashflow:
@@ -205,9 +202,3 @@ class MoneyForwardScraper:
             )
             cashflows.append(cashflow)
         return cashflows
-
-
-def update_mf_account(account: str, amount: float):
-    mf = MoneyForwardScraper(MONEYFORWARD_USER, MONEYFORWARD_PASSWORD)
-    mf.change_mf_group('グループ選択なし')
-    mf.update_account_amount(account, amount)
