@@ -3,12 +3,15 @@ import re
 import time
 import datetime
 from dataclasses import dataclass
+
 from selenium.webdriver import Remote
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 MONEYFORWARD_BASE_URL = "https://moneyforward.com"
@@ -32,14 +35,22 @@ class Cashflow:
     memo: str
 
 
+@dataclass
+class Budget:
+    lcategory: str
+    budget: int
+    group_name: str
+
+
 class MoneyForwardScraper:
     def __init__(self, user, password, group_name=None):
         self.create_driver()
         self.login(user, password)
-        self.previous_selected_group = self.get_current_group()
+        self.group_name = self.previous_selected_group = self.get_current_group()
         # グループが指定されている場合は変更
-        if group_name is not None:
+        if group_name is not None and group_name != self.previous_selected_group:
             self.change_mf_group(group_name)
+            self.group_name = group_name
 
     def __enter__(self):
         return self
@@ -211,3 +222,20 @@ class MoneyForwardScraper:
             )
             cashflows.append(cashflow)
         return cashflows
+
+    def get_budgets_of_group(self):
+        self.driver.get(MONEYFORWARD_BASE_URL + "/spending_targets/edit")
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'budget_detail')))
+        budget_div = self.driver.find_element(By.CLASS_NAME, 'budget_detail')
+        budget_table = budget_div.find_element(By.TAG_NAME, 'table')
+        budgets = []
+        for row in budget_table.find_element(By.TAG_NAME, 'tbody').find_elements(By.CSS_SELECTOR, 'tr.large_category'):
+            lcategory = row.find_element(By.TAG_NAME, 'th').text
+            budget = int(row.find_element(By.CSS_SELECTOR, 'input.large_category_amount').get_attribute('value'))
+            b = Budget(
+                lcategory=lcategory,
+                budget=budget,
+                group_name=self.group_name,
+            )
+            budgets.append(b)
+        return budgets
