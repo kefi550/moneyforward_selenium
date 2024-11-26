@@ -1,6 +1,5 @@
 import os
 import re
-import time
 import datetime
 from dataclasses import dataclass
 
@@ -82,7 +81,6 @@ class MoneyForwardScraper:
 
     def is_logined(self):
         self.driver.get(MONEYFORWARD_BASE_URL)
-        time.sleep(1)
         mfid = self.driver.get_cookie("identification_code")
         return mfid is not None
 
@@ -91,11 +89,11 @@ class MoneyForwardScraper:
             print("already logged in")
             return
         self.driver.get(MONEYFORWARD_BASE_URL + "/sign_in")
-        time.sleep(1)
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.NAME, 'mfid_user[email]')))
         user_input = self.driver.find_element(By.NAME, value='mfid_user[email]')
         user_input.send_keys(mf_user)
         user_input.submit()
-        time.sleep(1)
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.NAME, 'mfid_user[password]')))
         password_input = self.driver.find_element(By.NAME, value='mfid_user[password]')
         password_input.send_keys(mf_password)
         password_input.submit()
@@ -111,7 +109,6 @@ class MoneyForwardScraper:
         try:
             group_select.select_by_visible_text(group_name)
             print(f"グループ {group_name} に変更しました")
-            time.sleep(2)
         except NoSuchElementException:
             raise Exception(f"グループ {group_name} が見つかりませんでした")
 
@@ -136,7 +133,7 @@ class MoneyForwardScraper:
             # 収入支出詳細
             in_out = self.driver.find_element(By.ID, "in_out")
             in_out.find_element(By.CLASS_NAME, "cf-new-btn").click()
-            time.sleep(3)
+            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.ID, "user_asset_act_new")))
             # 手入力モーダル
             modal = in_out.find_element(By.ID, "user_asset_act_new")
             # 差額がプラスなら収入、マイナスなら支出として入力
@@ -147,7 +144,6 @@ class MoneyForwardScraper:
                 modal.find_element(By.CLASS_NAME, "minus-payment").click()
             modal.find_element(By.ID, "appendedPrependedInput").send_keys(amount_diff)
             modal.find_element(By.CLASS_NAME, "submit-box").click()
-            time.sleep(5)
             # 再描画されて要素を見失うのでリロードする
             self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
             self.driver.find_element(By.LINK_TEXT, account).click()
@@ -171,12 +167,11 @@ class MoneyForwardScraper:
         actions = ActionChains(self.driver)
         actions.move_to_element(div).perform()
         print(f"{year}年を選択した")
-        time.sleep(1)
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')))
         month_dropdown = div.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')
         month_button = month_dropdown.find_element(By.XPATH, f"a[@data-month=\"{month}\"]")
         month_button.click()
         print(f"{month}月を選択した")
-        time.sleep(3)
 
     def get_cashflows_of_fiscal_month(self, fiscal_year: int, fiscal_month: int):
         cashflows = []
