@@ -159,7 +159,7 @@ class MoneyForwardScraper:
         self.driver.get(MONEYFORWARD_BASE_URL + "/cf")
         # ちょっと下にスクロール
         self.driver.execute_script("window.scrollBy(0, 1000)")
-        year_selector_button = self.driver.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown')
+        year_selector_button = self.driver.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-text')
         year_selector_button.click()
         year_selector = self.driver.find_elements(By.CLASS_NAME, 'uikit-year-month-select-dropdown-year-part')
         for div in year_selector:
