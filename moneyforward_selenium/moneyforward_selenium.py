@@ -195,9 +195,11 @@ class MoneyForwardScraper:
                     note = cells[4].text
             else:
                 note = cells[4].text
-            if calc:
+            try:
                 lcategory = cells[5].find_element(By.TAG_NAME, 'a').text
                 mcategory = cells[6].find_element(By.TAG_NAME, 'a').text
+            except NoSuchElementException:
+                pass
             memo = cells[7].find_element(By.TAG_NAME, 'span').text
 
             print(f"{date} {content} {amount} {note} {lcategory} {mcategory}")
