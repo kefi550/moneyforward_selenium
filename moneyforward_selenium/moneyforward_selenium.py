@@ -72,6 +72,7 @@ class MoneyForwardScraper:
             command_executor=f'http://{SELENIUM_HOST}:{SELENIUM_PORT}/wd/hub',
             options=options,
         )
+        self.driver.set_window_size(1024, 768)
         print("driver created")
 
     def close_driver(self):
