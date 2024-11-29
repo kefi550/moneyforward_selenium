@@ -1,4 +1,5 @@
 import os
+import time
 import re
 import datetime
 from dataclasses import dataclass
@@ -157,6 +158,8 @@ class MoneyForwardScraper:
 
     def change_fiscal_month(self, year: int, month: int):
         self.driver.get(MONEYFORWARD_BASE_URL + "/cf")
+        # とりあえず固定でsleep
+        time.sleep(1)
         # ちょっと下にスクロール
         self.driver.execute_script("window.scrollBy(0, 1000)")
         year_selector_button = self.driver.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-text')
@@ -168,11 +171,14 @@ class MoneyForwardScraper:
         actions = ActionChains(self.driver)
         actions.move_to_element(div).perform()
         print(f"{year}年を選択した")
+        time.sleep(1)
         WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')))
         month_dropdown = div.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')
         month_button = month_dropdown.find_element(By.XPATH, f"a[@data-month=\"{month}\"]")
         month_button.click()
         print(f"{month}月を選択した")
+        # とりあえず固定でsleep
+        time.sleep(5)
 
     def get_cashflows_of_fiscal_month(self, fiscal_year: int, fiscal_month: int):
         cashflows = []
