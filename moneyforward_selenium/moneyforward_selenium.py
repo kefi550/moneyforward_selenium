@@ -1,4 +1,3 @@
-import os
 import time
 import re
 import datetime
@@ -15,9 +14,6 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 MONEYFORWARD_BASE_URL = "https://moneyforward.com"
-SELENIUM_HOST = os.environ.get("SELENIUM_HOST", "127.0.0.1")
-SELENIUM_PORT = os.environ.get("SELENIUM_PORT", "4444")
-CHROME_PROFILE_PATH = os.environ.get("CHROME_PROFILE_PATH", "/tmp/moneyforward-selenium")
 
 
 @dataclass
@@ -43,14 +39,22 @@ class Budget:
 
 
 class MoneyForwardScraper:
-    def __init__(self, user, password, group_name=None):
-        self.create_driver()
-        self.login(user, password)
+    def __init__(
+        self,
+        moneyforward_user,
+        moneyforward_password,
+        selenium_host,
+        selenium_port,
+        moneyforward_group_name=None,
+        selenium_chrome_profile_path="/tmp/moneyforward-selenium",
+    ):
+        self.create_driver(selenium_host, selenium_port, selenium_chrome_profile_path)
+        self.login(moneyforward_user, moneyforward_password)
         self.group_name = self.previous_selected_group = self.get_current_group()
         # グループが指定されている場合は変更
-        if group_name is not None and group_name != self.previous_selected_group:
-            self.change_mf_group(group_name)
-            self.group_name = group_name
+        if moneyforward_group_name is not None and moneyforward_group_name != self.previous_selected_group:
+            self.change_mf_group(moneyforward_group_name)
+            self.group_name = moneyforward_group_name
 
     def __enter__(self):
         return self
@@ -61,16 +65,16 @@ class MoneyForwardScraper:
         finally:
             self.close_driver()
 
-    def create_driver(self):
+    def create_driver(self, selenium_host, selenium_port, chrome_profile_path):
         options = ChromeOptions()
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         # options.add_argument("--headless")
         options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36')
-        options.add_argument(f"--user-data-dir={CHROME_PROFILE_PATH}")
+        options.add_argument(f"--user-data-dir={chrome_profile_path}")
         self.driver = Remote(
-            command_executor=f'http://{SELENIUM_HOST}:{SELENIUM_PORT}/wd/hub',
+            command_executor=f'http://{selenium_host}:{selenium_port}/wd/hub',
             options=options,
         )
         self.driver.set_window_size(1024, 768)
