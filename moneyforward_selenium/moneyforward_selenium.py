@@ -77,7 +77,7 @@ class MoneyForwardScraper:
             command_executor=f'http://{selenium_host}:{selenium_port}/wd/hub',
             options=options,
         )
-        self.driver.set_window_size(1024, 768)
+        self.driver.set_window_size(1400, 1068)
         print("driver created")
 
     def close_driver(self):
@@ -247,3 +247,17 @@ class MoneyForwardScraper:
             )
             budgets.append(b)
         return budgets
+
+    def update_accounts_of_group(self, account_index=1):
+        self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'accounts')))
+        accounts = self.driver.find_element(By.CLASS_NAME, 'accounts')
+        account_table = accounts.find_element(By.ID, 'account-table')
+        rows = account_table.find_element(By.TAG_NAME, 'tbody').find_elements(By.TAG_NAME, 'tr')
+        row = rows[account_index]
+        form = row.find_element(By.TAG_NAME, 'form')
+        form.submit()
+        if account_index < len(rows) - 1:
+            self.update_accounts_of_group(account_index+1)
+        # 適当
+        time.sleep(2)
