@@ -8,7 +8,7 @@ from selenium.webdriver import ChromeOptions
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -248,16 +248,24 @@ class MoneyForwardScraper:
             budgets.append(b)
         return budgets
 
-    def update_accounts_of_group(self, account_index=1):
-        self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
-        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'accounts')))
-        accounts = self.driver.find_element(By.CLASS_NAME, 'accounts')
-        account_table = accounts.find_element(By.ID, 'account-table')
-        rows = account_table.find_element(By.TAG_NAME, 'tbody').find_elements(By.TAG_NAME, 'tr')
-        row = rows[account_index]
-        form = row.find_element(By.TAG_NAME, 'form')
-        form.submit()
-        if account_index < len(rows) - 1:
-            self.update_accounts_of_group(account_index+1)
-        # 適当
-        time.sleep(2)
+    # 更新ボタンを押して更新が完了したらオブジェクトがrefreshされてしまうので、連続して更新ボタンを押すとタイミングによってはバグる(更新ボタンを押せなくなる)
+    # 一つ一つ更新ボタンを押す前に画面ごとrefreshしてから押すことで軽減してるつもり
+    def update_accounts_of_group(self, account_index=1, retry_count=0):
+        try:
+            self.driver.get(MONEYFORWARD_BASE_URL + "/accounts")
+            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'accounts')))
+            accounts = self.driver.find_element(By.CLASS_NAME, 'accounts')
+            account_table = accounts.find_element(By.ID, 'account-table')
+            rows = account_table.find_element(By.TAG_NAME, 'tbody').find_elements(By.TAG_NAME, 'tr')
+            row = rows[account_index]
+            form = row.find_element(By.TAG_NAME, 'form')
+            form.submit()
+            if account_index < len(rows) - 1:
+                self.update_accounts_of_group(account_index+1)
+        except StaleElementReferenceException as e:
+            print(f"StaleElementReferenceException: {e}")
+            if retry_count < 3:
+                print("retry")
+                self.update_accounts_of_group(account_index, retry_count+1)
+            else:
+                raise e
