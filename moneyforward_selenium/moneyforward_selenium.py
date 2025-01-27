@@ -165,24 +165,29 @@ class MoneyForwardScraper:
         # とりあえず固定でsleep
         time.sleep(1)
         # ちょっと下にスクロール
-        self.driver.execute_script("window.scrollBy(0, 1000)")
-        year_selector_button = self.driver.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-text')
-        year_selector_button.click()
-        year_selector = self.driver.find_elements(By.CLASS_NAME, 'uikit-year-month-select-dropdown-year-part')
-        for div in year_selector:
-            if div.text == str(year):
-                break
-        actions = ActionChains(self.driver)
-        actions.move_to_element(div).perform()
-        print(f"{year}年を選択した")
-        time.sleep(1)
-        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')))
-        month_dropdown = div.find_element(By.CLASS_NAME, 'uikit-year-month-select-dropdown-month-part')
-        month_button = month_dropdown.find_element(By.XPATH, f"a[@data-month=\"{month}\"]")
-        month_button.click()
-        print(f"{month}月を選択した")
-        # とりあえず固定でsleep
-        time.sleep(5)
+        self.driver.execute_script("window.scrollBy(0, 400)")
+
+        # NOTE: 月の選択したときに表示したい月ではない画面に遷移することがある
+        # 2回繰り返して選択することでただしく月を選択できるっぽいので2回月選択を繰り返す
+        for i in range(2):
+            year_selector_button = self.driver.find_element(By.CLASS_NAME, 'fc-button-selectMonth')
+            year_selector_button.click()
+            time.sleep(2)
+            year_selector = self.driver.find_element(By.CLASS_NAME, 'year-container')
+            year_button = year_selector.find_element(By.XPATH, f"li[@data-year=\"{year}\"]")
+            actions = ActionChains(self.driver)
+            actions.move_to_element(year_button).perform()
+            print(f"{year}年を選択した")
+            time.sleep(1)
+            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'month-container')))
+            month_dropdown = year_button.find_element(By.CLASS_NAME, 'month-container')
+            month_button = month_dropdown.find_element(By.XPATH, f"li[@data-month=\"{month}\"]")
+            actions.move_to_element(month_button).perform()
+            time.sleep(2)
+            month_button.click()
+            print(f"{month}月を選択した")
+            # とりあえず固定でsleep
+            time.sleep(1)
 
     def get_cashflows_of_fiscal_month(self, fiscal_year: int, fiscal_month: int):
         cashflows = []
