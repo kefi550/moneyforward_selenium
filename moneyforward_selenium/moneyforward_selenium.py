@@ -46,7 +46,7 @@ class MoneyForwardScraper:
         selenium_host,
         selenium_port,
         moneyforward_group_name=None,
-        selenium_chrome_profile_path="/tmp/moneyforward-selenium",
+        selenium_chrome_profile_path="/tmp/chrome-profile/moneyforward",
     ):
         self.create_driver(selenium_host, selenium_port, selenium_chrome_profile_path)
         self.login(moneyforward_user, moneyforward_password)
