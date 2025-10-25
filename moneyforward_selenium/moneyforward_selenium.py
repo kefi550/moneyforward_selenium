@@ -168,26 +168,47 @@ class MoneyForwardScraper:
         self.driver.execute_script("window.scrollBy(0, 400)")
 
         # NOTE: 月の選択したときに表示したい月ではない画面に遷移することがある
-        # 2回繰り返して選択することでただしく月を選択できるっぽいので2回月選択を繰り返す
-        for i in range(2):
-            year_selector_button = self.driver.find_element(By.CLASS_NAME, 'fc-button-selectMonth')
-            year_selector_button.click()
-            time.sleep(2)
-            year_selector = self.driver.find_element(By.CLASS_NAME, 'year-container')
-            year_button = year_selector.find_element(By.XPATH, f"li[@data-year=\"{year}\"]")
-            actions = ActionChains(self.driver)
-            actions.move_to_element(year_button).perform()
-            print(f"{year}年を選択した")
-            time.sleep(1)
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'month-container')))
-            month_dropdown = year_button.find_element(By.CLASS_NAME, 'month-container')
-            month_button = month_dropdown.find_element(By.XPATH, f"li[@data-month=\"{month}\"]")
-            actions.move_to_element(month_button).perform()
-            time.sleep(2)
-            month_button.click()
-            print(f"{month}月を選択した")
-            # とりあえず固定でsleep
-            time.sleep(1)
+        # 遷移したあとに表示された営業月を判定し、月移動ボタンで修正する
+        year_selector_button = self.driver.find_element(By.CLASS_NAME, 'fc-button-selectMonth')
+        year_selector_button.click()
+        time.sleep(2)
+        year_selector = self.driver.find_element(By.CLASS_NAME, 'year-container')
+        year_button = year_selector.find_element(By.XPATH, f"li[@data-year=\"{year}\"]")
+        actions = ActionChains(self.driver)
+        actions.move_to_element(year_button).perform()
+        time.sleep(1)
+        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, 'month-container')))
+        month_dropdown = year_button.find_element(By.CLASS_NAME, 'month-container')
+        month_button = month_dropdown.find_element(By.XPATH, f"li[@data-month=\"{month}\"]")
+        actions.move_to_element(month_button).perform()
+        time.sleep(2)
+        month_button.click()
+        # とりあえず固定でsleep
+        time.sleep(1)
+
+        current_year, current_month = self._detect_fiscal_month()
+        while (current_year, current_month) != (year, month):
+            if current_year < year or (current_year == year and current_month < month):
+                self._change_fiscal_month_to_next()
+            else:
+                self._change_fiscal_month_to_prev()
+            current_year, current_month = self._detect_fiscal_month()
+
+    def _change_fiscal_month_to_next(self):
+        self.driver.find_element(By.CLASS_NAME, 'fc-button-next').click()
+        time.sleep(1)
+
+    def _change_fiscal_month_to_prev(self):
+        self.driver.find_element(By.CLASS_NAME, 'fc-button-prev').click()
+        time.sleep(1)
+
+    def _detect_fiscal_month(self):
+        month_text = self.driver.find_element(By.CLASS_NAME, 'fc-header-title').text
+        start_date_text = month_text.split(' - ')[0]
+        start_date = datetime.datetime.strptime(start_date_text, '%Y/%m/%d').date()
+        fiscal_year = start_date.year
+        fiscal_month = start_date.month
+        return fiscal_year, fiscal_month
 
     def get_cashflows_of_fiscal_month(self, fiscal_year: int, fiscal_month: int):
         cashflows = []
